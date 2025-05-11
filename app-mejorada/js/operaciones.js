@@ -103,7 +103,30 @@ const Operaciones = {
                         <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">Historial de Operaciones</h5>
-                                
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <ul class="nav nav-tabs mb-3" id="operacionesTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="activos-tab" data-bs-toggle="tab" data-bs-target="#activos" type="button" role="tab" aria-controls="activos" aria-selected="true">
+                                                    <i class="fas fa-tasks me-1"></i>Activos
+                                                </button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="archivo-tab" data-bs-toggle="tab" data-bs-target="#archivo" type="button" role="tab" aria-controls="archivo" aria-selected="false">
+                                                    <i class="fas fa-archive me-1"></i>Archivo
+                                                </button>
+                                            </li>
+                                        </ul>
+                                        <div class="tab-content" id="operacionesTabsContent">
+                                            <div class="tab-pane fade show active" id="activos" role="tabpanel" aria-labelledby="activos-tab">
+                                                <div id="listaOperacionesActivas"></div>
+                                            </div>
+                                            <div class="tab-pane fade" id="archivo" role="tabpanel" aria-labelledby="archivo-tab">
+                                                <div id="listaOperacionesArchivo"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row mb-3 filtros-container">
                                     <div class="col-md-2">
                                         <label for="filtroFechaOperacion" class="form-label">Fecha</label>
@@ -149,10 +172,6 @@ const Operaciones = {
                                             <option value="proxima">Próxima</option>
                                         </select>
                                     </div>
-                                </div>
-                                
-                                <div id="listaOperaciones" class="operaciones-container">
-                                    <!-- Las operaciones se cargarán dinámicamente -->
                                 </div>
                             </div>
                         </div>
@@ -606,28 +625,16 @@ const Operaciones = {
     // Mostrar las operaciones según los filtros
     mostrarOperaciones() {
         const operaciones = this.getOperacionesFiltradas();
-        const container = document.getElementById('listaOperaciones');
-        
-        if (!container) return;
-        
-        if (operaciones.length === 0) {
-            container.innerHTML = `
-                <div class="placeholder-message">
-                    <i class="fas fa-inbox"></i>
-                    <p>No hay operaciones registradas con los filtros seleccionados</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Ordenar operaciones por fecha (más recientes primero)
-        operaciones.sort((a, b) => {
-            return new Date(b.fecha) - new Date(a.fecha);
-        });
-        
+        const activas = operaciones.filter(op => op.estado !== 'finalizado' && op.estado !== 'completado');
+        const archivo = operaciones.filter(op => op.estado === 'finalizado' || op.estado === 'completado');
+        document.getElementById('listaOperacionesActivas').innerHTML = this.generarHTMLOperaciones(activas);
+        document.getElementById('listaOperacionesArchivo').innerHTML = this.generarHTMLOperaciones(archivo, true);
+    },
+
+    // Generar HTML de operaciones
+    generarHTMLOperaciones(ops, esArchivo = false) {
         let html = '';
-        
-        operaciones.forEach(op => {
+        ops.forEach(op => {
             // Formatear fecha
             const fecha = new Date(op.fecha);
             const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -689,11 +696,7 @@ const Operaciones = {
                 </div>
             `;
         });
-        
-        container.innerHTML = html;
-        
-        // Asignar eventos a los botones
-        this.setupBotonesOperaciones();
+        return html;
     },
 
     // Configurar botones de operaciones
