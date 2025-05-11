@@ -663,88 +663,100 @@ const Nomina = {
     
     // Exportar a PDF
     exportarPDF() {
-        const nominas = DB.getNominas();
-        if (nominas.length === 0) {
-            UI.mostrarNotificacion('No hay datos para exportar', 'warning');
-            return;
-        }
-        
         try {
-            // Verificar disponibilidad de jsPDF
-            if (typeof window.jspdf === 'undefined') {
-                UI.mostrarNotificacion('Biblioteca jsPDF no disponible', 'error');
+            let doc;
+            if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+                doc = new window.jspdf.jsPDF();
+            } else if (typeof jsPDF !== 'undefined') {
+                doc = new jsPDF();
+            } else {
+                throw new Error('jsPDF no está disponible');
+            }
+
+            const nominas = DB.getNominas();
+            if (nominas.length === 0) {
+                UI.mostrarNotificacion('No hay datos para exportar', 'warning');
                 return;
             }
-            
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Configurar título y fecha
-            doc.setFontSize(16);
-            doc.text('Registro de Nóminas', 20, 20);
-            
+
+            // Título centrado
+            doc.setFontSize(18);
+            doc.setTextColor(41, 128, 185);
+            doc.text('Registro de Nóminas', 105, 20, { align: 'center' });
+
+            // Fecha y hora arriba a la derecha
             doc.setFontSize(10);
-            doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, 20, 30);
-            
-            // Obtener resumen por persona
-            const resumenPersonas = DB.getResumenNominas();
-            
-            // Crear tabla de resumen por persona
-            const headersResumen = [['Persona', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Días Trabajados', 'Secciones']];
-            
-            const dataResumen = resumenPersonas.map(persona => [
-                persona.nombre,
-                persona.horasNormales.toFixed(1),
-                persona.horasExtras.toFixed(1),
-                persona.totalHoras.toFixed(1),
-                persona.diasTrabajados,
-                persona.secciones.join(', ')
-            ]);
-            
-            // Añadir tabla de resumen al documento
-            doc.autoTable({
-                head: headersResumen,
-                body: dataResumen,
-                startY: 40,
-                theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-                alternateRowStyles: { fillColor: [240, 240, 240] },
-                margin: { top: 40 }
+            doc.setTextColor(100);
+            doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, 200, 15, { align: 'right' });
+
+            // Encabezados de tabla
+            const headers = ['Persona', 'Fecha', 'Sección', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Observaciones'];
+            const colWidths = [35, 22, 22, 22, 22, 22, 45];
+            let y = 35;
+            let x = 10;
+            let rowHeight = 9;
+
+            // Encabezado con fondo azul
+            doc.setFillColor(41, 128, 185);
+            doc.setTextColor(255,255,255);
+            let colX = x;
+            headers.forEach((header, i) => {
+                doc.rect(colX, y, colWidths[i], rowHeight, 'F');
+                doc.text(header, colX + 2, y + 6);
+                colX += colWidths[i];
             });
-            
-            // Crear tabla de detalle
-            const headersDetalle = [['Persona', 'Fecha', 'Sección', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Observaciones']];
-            
-            const dataDetalle = nominas.map(nomina => [
-                nomina.personaNombre || 'No asignado',
-                nomina.fecha,
-                nomina.seccion || 'N/A',
-                nomina.horasNormales.toFixed(1),
-                nomina.horasExtras.toFixed(1),
-                (nomina.horasNormales + nomina.horasExtras).toFixed(1),
-                (nomina.observaciones || '').substring(0, 20)
-            ]);
-            
-            // Añadir tabla de detalle al documento
-            doc.autoTable({
-                head: headersDetalle,
-                body: dataDetalle,
-                startY: doc.lastAutoTable.finalY + 20,
-                theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-                alternateRowStyles: { fillColor: [240, 240, 240] }
+
+            // Filas de la tabla
+            y += rowHeight;
+            doc.setFontSize(9);
+            nominas.forEach((nomina, idx) => {
+                colX = x;
+                // Fondo alterno
+                if (idx % 2 === 1) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(x, y, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+                }
+                doc.setTextColor(30,30,30);
+                const fila = [
+                    nomina.personaNombre || 'No asignado',
+                    nomina.fecha,
+                    nomina.seccion || 'N/A',
+                    (nomina.horasNormales || 0).toFixed(1),
+                    (nomina.horasExtras || 0).toFixed(1),
+                    ((nomina.horasNormales || 0) + (nomina.horasExtras || 0)).toFixed(1),
+                    (nomina.observaciones || '').substring(0, 40)
+                ];
+                fila.forEach((cell, i) => {
+                    doc.text(String(cell), colX + 2, y + 6, { maxWidth: colWidths[i] - 4 });
+                    // Bordes de celda
+                    doc.setDrawColor(200);
+                    doc.rect(colX, y, colWidths[i], rowHeight);
+                    colX += colWidths[i];
+                });
+                y += rowHeight;
+                if (y > 270) { // Salto de página si es necesario
+                    doc.addPage();
+                    y = 20;
+                    // Repetir encabezado en nueva página
+                    colX = x;
+                    doc.setFillColor(41, 128, 185);
+                    doc.setTextColor(255,255,255);
+                    headers.forEach((header, i) => {
+                        doc.rect(colX, y, colWidths[i], rowHeight, 'F');
+                        doc.text(header, colX + 2, y + 6);
+                        colX += colWidths[i];
+                    });
+                    y += rowHeight;
+                    doc.setFontSize(9);
+                }
             });
-            
-            // Guardar el PDF
+
             const fileName = `registro_nominas_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
-            
             UI.mostrarNotificacion(`PDF generado: ${fileName}`, 'success');
         } catch (error) {
             console.error('Error al generar PDF:', error);
-            UI.mostrarNotificacion(`Error al generar PDF: ${error.message}`, 'error');
+            UI.mostrarNotificacion('Error al generar PDF: ' + error.message, 'error');
         }
     },
     
