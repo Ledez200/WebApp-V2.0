@@ -10,7 +10,8 @@ const Nomina = {
             fechaDesde: '',
             fechaHasta: '',
             persona: '',
-            seccion: ''
+            seccion: '',
+            busqueda: ''
         }
     },
 
@@ -97,6 +98,8 @@ const Nomina = {
                                             <option value="Descarga">Descarga</option>
                                             <option value="Elaboración">Elaboración</option>
                                             <option value="Clasificación">Clasificación</option>
+                                            <option value="Empaquetado">Empaquetado</option>
+                                            <option value="General">General</option>
                                         </select>
                                     </div>
                                 </div>
@@ -122,13 +125,65 @@ const Nomina = {
                         </div>
                     </div>
                 </div>
+
+                <!-- Sección de filtros -->
+                <div class="col-12 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Filtros</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Fecha Desde</label>
+                                    <input type="date" class="form-control" id="filtroFechaDesde">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Fecha Hasta</label>
+                                    <input type="date" class="form-control" id="filtroFechaHasta">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Persona</label>
+                                    <select class="form-select" id="filtroPersona">
+                                        <option value="">Todas</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Sección</label>
+                                    <select class="form-select" id="filtroSeccion">
+                                        <option value="">Todas</option>
+                                        <option value="Descarga">Descarga</option>
+                                        <option value="Elaboración">Elaboración</option>
+                                        <option value="Clasificación">Clasificación</option>
+                                        <option value="Empaquetado">Empaquetado</option>
+                                        <option value="General">General</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-end">
+                                        <button type="button" class="btn btn-secondary me-2" id="btnLimpiarFiltros">
+                                            <i class="fas fa-eraser me-1"></i> Limpiar
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="btnAplicarFiltros">
+                                            <i class="fas fa-filter me-1"></i> Aplicar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de registros -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">Registros de Nómina</h5>
                             <div class="input-group" style="max-width: 300px;">
                                 <input type="text" class="form-control" id="buscarNomina" placeholder="Buscar...">
-                                <button class="btn btn-outline-secondary" type="button" id="btnFiltrarNomina">
+                                <button class="btn btn-outline-secondary" type="button" id="btnAplicarFiltros">
                                     <i class="fas fa-filter"></i>
                                 </button>
                             </div>
@@ -183,7 +238,9 @@ const Nomina = {
         const btnExportarExcel = document.getElementById('btnExportarExcel');
         const btnRespaldarDatos = document.getElementById('btnRespaldarDatos');
         const btnCargarDatos = document.getElementById('btnCargarDatos');
-        const btnFiltrar = document.getElementById('btnFiltrarNomina');
+        const btnFiltrar = document.getElementById('btnAplicarFiltros');
+        const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
+        const inputBusqueda = document.getElementById('buscarNomina');
         
         if (form) {
             form.addEventListener('submit', (e) => {
@@ -214,6 +271,37 @@ const Nomina = {
         
         if (btnFiltrar) {
             btnFiltrar.addEventListener('click', () => this.aplicarFiltros());
+        }
+
+        if (btnLimpiarFiltros) {
+            btnLimpiarFiltros.addEventListener('click', () => {
+                // Limpiar todos los campos de filtro
+                document.getElementById('filtroFechaDesde').value = '';
+                document.getElementById('filtroFechaHasta').value = '';
+                document.getElementById('filtroPersona').value = '';
+                document.getElementById('filtroSeccion').value = '';
+                document.getElementById('buscarNomina').value = '';
+                
+                // Limpiar estado de filtros
+                this.state.filtros = {
+                    fechaDesde: '',
+                    fechaHasta: '',
+                    persona: '',
+                    seccion: '',
+                    busqueda: ''
+                };
+                
+                // Mostrar todas las nóminas
+                this.mostrarNominas();
+            });
+        }
+
+        if (inputBusqueda) {
+            inputBusqueda.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    this.aplicarFiltros();
+                }
+            });
         }
         
         // Establecer fecha actual
@@ -359,60 +447,18 @@ const Nomina = {
     // Mostrar registros de nómina
     mostrarNominas() {
         console.log('Mostrando registros de nómina');
-        const nominas = DB.getNominas();
-        const tbody = document.getElementById('nominasTableBody');
         
-        if (!tbody) {
-            console.error('No se encontró el elemento tbody para mostrar nóminas');
-            return;
-        }
+        // Verificar si hay filtros activos
+        const hayFiltrosActivos = Object.values(this.state.filtros).some(valor => valor !== '');
         
-        tbody.innerHTML = '';
+        // Obtener nóminas según si hay filtros o no
+        const nominas = hayFiltrosActivos ? this.getNominasFiltradas() : DB.getAll('nominas');
         
-        if (nominas.length === 0) {
-            console.log('No hay registros de nómina para mostrar');
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center">No hay registros de nómina</td>
-                </tr>
-            `;
-            return;
-        }
+        // Mostrar las nóminas en la tabla
+        this.mostrarNominasFiltradas(nominas);
         
-        console.log(`Mostrando ${nominas.length} registros de nómina`);
-        
-        // Ordenar por fecha (más recientes primero)
-        nominas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        
-        nominas.forEach(nomina => {
-            const totalHoras = (nomina.horasNormales || 0) + (nomina.horasExtras || 0);
-            const fechaFormateada = new Date(nomina.fecha).toLocaleDateString('es-ES');
-            
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${nomina.personaNombre || 'Sin asignar'}</td>
-                <td>${fechaFormateada}</td>
-                <td>${nomina.seccion || 'N/A'}</td>
-                <td>${(nomina.horasNormales || 0).toFixed(1)}</td>
-                <td>${(nomina.horasExtras || 0).toFixed(1)}</td>
-                <td>${totalHoras.toFixed(1)}</td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary btn-editar" data-id="${nomina.id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-outline-danger btn-eliminar" data-id="${nomina.id}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            
-            tbody.appendChild(tr);
-        });
-        
-        // Configurar eventos en los botones (separado para evitar problemas con innerHTML)
-        this.configurarBotonesAcciones();
+        // Actualizar total de horas
+        this.actualizarTotalHoras(nominas);
     },
     
     // Configurar eventos de botones de acciones (editar, eliminar)
@@ -497,8 +543,122 @@ const Nomina = {
     
     // Aplicar filtros a la lista de nóminas
     aplicarFiltros() {
-        // Implementar filtros
-        UI.mostrarNotificacion('Funcionalidad de filtrado en desarrollo', 'info');
+        const fechaDesde = document.getElementById('filtroFechaDesde').value;
+        const fechaHasta = document.getElementById('filtroFechaHasta').value;
+        const persona = document.getElementById('filtroPersona').value;
+        const seccion = document.getElementById('filtroSeccion').value;
+        const busqueda = document.getElementById('buscarNomina').value;
+
+        // Actualizar estado de filtros
+        this.state.filtros = {
+            fechaDesde,
+            fechaHasta,
+            persona,
+            seccion,
+            busqueda
+        };
+
+        // Obtener nóminas filtradas
+        const nominas = this.getNominasFiltradas();
+        
+        // Actualizar la tabla
+        this.mostrarNominasFiltradas(nominas);
+        
+        // Actualizar total de horas
+        this.actualizarTotalHoras(nominas);
+    },
+
+    // Obtener nóminas filtradas
+    getNominasFiltradas() {
+        let nominas = DB.getAll('nominas');
+        
+        // Aplicar filtros
+        if (this.state.filtros.fechaDesde) {
+            nominas = nominas.filter(n => n.fecha >= this.state.filtros.fechaDesde);
+        }
+        
+        if (this.state.filtros.fechaHasta) {
+            nominas = nominas.filter(n => n.fecha <= this.state.filtros.fechaHasta);
+        }
+        
+        if (this.state.filtros.persona) {
+            nominas = nominas.filter(n => n.personaId === this.state.filtros.persona);
+        }
+        
+        if (this.state.filtros.seccion) {
+            nominas = nominas.filter(n => n.seccion === this.state.filtros.seccion);
+        }
+        
+        if (this.state.filtros.busqueda) {
+            const busqueda = this.state.filtros.busqueda.toLowerCase();
+            nominas = nominas.filter(n => 
+                n.personaNombre.toLowerCase().includes(busqueda) ||
+                n.seccion.toLowerCase().includes(busqueda) ||
+                (n.observaciones && n.observaciones.toLowerCase().includes(busqueda))
+            );
+        }
+        
+        // Ordenar por fecha (más recientes primero)
+        return nominas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    },
+
+    // Mostrar nóminas filtradas en la tabla
+    mostrarNominasFiltradas(nominas) {
+        const tbody = document.getElementById('nominasTableBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        if (nominas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">No hay registros que coincidan con los filtros</td>
+                </tr>
+            `;
+            return;
+        }
+        
+        nominas.forEach(nomina => {
+            const totalHoras = (nomina.horasNormales || 0) + (nomina.horasExtras || 0);
+            const fechaFormateada = new Date(nomina.fecha).toLocaleDateString('es-ES');
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${nomina.personaNombre || 'Sin asignar'}</td>
+                <td>${fechaFormateada}</td>
+                <td>${nomina.seccion || 'N/A'}</td>
+                <td>${(nomina.horasNormales || 0).toFixed(1)}</td>
+                <td>${(nomina.horasExtras || 0).toFixed(1)}</td>
+                <td>${totalHoras.toFixed(1)}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-editar" data-id="${nomina.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-eliminar" data-id="${nomina.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+        });
+        
+        // Configurar eventos en los botones
+        this.configurarBotonesAcciones();
+    },
+
+    // Actualizar total de horas registradas
+    actualizarTotalHoras(nominas) {
+        const totalHoras = nominas.reduce((total, nomina) => {
+            return total + (nomina.horasNormales || 0) + (nomina.horasExtras || 0);
+        }, 0);
+        
+        const elementoTotal = document.getElementById('totalHorasRegistradas');
+        if (elementoTotal) {
+            elementoTotal.textContent = totalHoras.toFixed(1);
+        }
     },
     
     // Exportar a PDF

@@ -1245,18 +1245,13 @@ const Elaboracion = {
 
     // Eliminar una elaboración
     eliminarElaboracion(id) {
-        // Eliminar consumos de inventario relacionados a esta elaboración
-        const movimientos = DB.getAll('inventario').filter(m => m.elaboracionId === id);
-        
-        if (movimientos.length > 0) {
-            movimientos.forEach(movimiento => {
-                DB.delete('inventario', movimiento.id);
-            });
-            
-            // Notificar actualización de inventario
-            document.dispatchEvent(new CustomEvent('inventarioActualizado'));
+        // Verificar que la elaboración existe
+        const elaboracion = DB.getById('elaboraciones', id);
+        if (!elaboracion) {
+            UI.mostrarNotificacion('No se encontró la elaboración a eliminar', 'error');
+            return;
         }
-        
+
         // Eliminar la elaboración
         const resultado = DB.delete('elaboraciones', id);
         

@@ -101,8 +101,6 @@ const Notas = {
                     <div class="col-md-8">
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title">Historial de Notas</h5>
-                                
                                 <div class="row mb-3 filtros-container">
                                     <div class="col-md-3">
                                         <label for="filtroFecha" class="form-label">Filtrar por fecha</label>
@@ -124,7 +122,7 @@ const Notas = {
                                     <div class="col-md-3">
                                         <label for="filtroPersona" class="form-label">Filtrar por persona</label>
                                         <select class="form-select" id="filtroPersona">
-                                            <option value=""Todas las personas></option>
+                                            <option value="">Todas las personas</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -137,9 +135,8 @@ const Notas = {
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div id="listaNotas" class="notas-container">
-                                    <!-- Las notas se cargarán dinámicamente -->
+                                <div id="listaNotasActivas" class="notas-container">
+                                    <!-- Las notas activas se cargarán dinámicamente -->
                                 </div>
                             </div>
                         </div>
@@ -415,6 +412,11 @@ const Notas = {
         // Guardar en la base de datos
         const resultado = DB.add('notas', nuevaNota);
         
+        if (!resultado) {
+            UI.mostrarNotificacion('Error al guardar la nota', 'error');
+            return;
+        }
+        
         // Limpiar formulario
         document.getElementById('formNuevaNota').reset();
         
@@ -484,26 +486,35 @@ const Notas = {
 
     // Mostrar notas en la interfaz
     mostrarNotas() {
-        const container = document.getElementById('listaNotas');
+        const containerActivas = document.getElementById('listaNotasActivas');
         
-        if (!container) return;
-        
-        const notas = this.getNotasFiltradas();
-        
-        if (notas.length === 0) {
-            container.innerHTML = `
-                <div class="placeholder-message">
-                    <i class="fas fa-sticky-note"></i>
-                    <p>No hay notas que coincidan con los filtros</p>
-                </div>
-            `;
+        if (!containerActivas) {
+            console.error('No se encontró el contenedor de notas');
             return;
         }
         
-        let html = '';
+        const notas = this.getNotasFiltradas();
+        const notasActivas = notas.filter(nota => nota.estado !== 'finalizado');
         
-        // Ordenar notas por fecha (más recientes primero)
-        notas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        // Mostrar notas activas
+        if (notasActivas.length === 0) {
+            containerActivas.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay notas activas que coincidan con los filtros
+                </div>
+            `;
+        } else {
+            containerActivas.innerHTML = this.generarHTMLNotas(notasActivas);
+        }
+        
+        // Configurar botones de acción
+        this.setupBotonesNotas();
+    },
+
+    // Generar HTML para las notas
+    generarHTMLNotas(notas) {
+        let html = '';
         
         notas.forEach(nota => {
             const fechaObj = new Date(nota.fecha);
@@ -513,51 +524,60 @@ const Notas = {
                 minute: '2-digit'
             });
             
-            // Obtener el color correspondiente al área
             const colorClase = this.getColorClaseArea(nota.area);
             
-            // Crear badges para personas asignadas
             let personasBadges = '';
             if (nota.personasNombres && nota.personasNombres.length > 0) {
                 personasBadges = nota.personasNombres.map(nombre => 
-                    `<span class="badge bg-success"><i class="fas fa-user me-1"></i>${nombre}</span>`
+                    `<span class="badge bg-success me-1"><i class="fas fa-user me-1"></i>${nombre}</span>`
                 ).join('');
             }
             
-            // Icono para el área
             const icono = this.getIconoArea(nota.area);
             
+            const estadoBadge = nota.estado === 'finalizado' 
+                ? '<span class="badge bg-success me-2"><i class="fas fa-check me-1"></i>Finalizado</span>'
+                : '<span class="badge bg-warning me-2"><i class="fas fa-clock me-1"></i>Pendiente</span>';
+
+            // Versión normal para notas activas
             html += `
-                <div class="nota-item ${colorClase}" data-id="${nota.id}">
-                    <div class="nota-header">
-                        <div class="nota-meta">
-                            <span class="badge ${this.getBadgeClaseArea(nota.area)}">
-                                <i class="fas ${icono} me-1"></i>${nota.area}
-                            </span>
-                            <span class="nota-fecha">
-                                <i class="far fa-calendar-alt me-1"></i>${fecha}
-                                <i class="far fa-clock ms-2 me-1"></i>${hora}
-                            </span>
+                <div class="nota-item ${colorClase} mb-3" data-id="${nota.id}">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="nota-meta">
+                                <span class="badge ${this.getBadgeClaseArea(nota.area)} me-2">
+                                    <i class="fas ${icono} me-1"></i>${nota.area}
+                                </span>
+                                ${estadoBadge}
+                                <span class="text-muted">
+                                    <i class="far fa-calendar-alt me-1"></i>${fecha}
+                                    <i class="far fa-clock ms-2 me-1"></i>${hora}
+                                </span>
+                            </div>
+                            <div class="nota-actions">
+                                <button class="btn btn-sm btn-outline-primary btn-editar-nota me-1" data-id="${nota.id}" title="Editar nota">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger btn-eliminar-nota me-1" data-id="${nota.id}" title="Eliminar nota">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                ${nota.estado !== 'finalizado' ? `
+                                    <button class="btn btn-sm btn-outline-success btn-finalizar-nota" data-id="${nota.id}" title="Marcar como finalizada">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
-                        <div class="nota-actions">
-                            <button class="btn btn-sm btn-outline-secondary btn-editar-nota" data-id="${nota.id}" title="Editar nota">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-eliminar-nota" data-id="${nota.id}" title="Eliminar nota">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div class="card-body">
+                            <div class="nota-contenido mb-2">${nota.contenido}</div>
+                            ${personasBadges ? `<div class="nota-personas mt-2">${personasBadges}</div>` : ''}
                         </div>
                     </div>
-                    <div class="nota-contenido">${nota.contenido}</div>
-                    ${personasBadges ? `<div class="nota-personas">${personasBadges}</div>` : ''}
                 </div>
             `;
         });
         
-        container.innerHTML = html;
-        
-        // Configurar botones de acción
-        this.setupBotonesNotas();
+        return html;
     },
 
     // Obtener clase de color según el área
@@ -620,6 +640,14 @@ const Notas = {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
                 this.confirmarEliminarNota(id);
+            });
+        });
+
+        // Botones de finalizar
+        document.querySelectorAll('.btn-finalizar-nota').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                this.finalizarNota(id);
             });
         });
     },
@@ -744,21 +772,68 @@ const Notas = {
 
     // Eliminar nota
     eliminarNota(id) {
-        // Eliminar de la base de datos
-        const resultado = DB.delete('notas', id);
-        
-        // Actualizar lista de notas
+        try {
+            // Verificar que el ID existe
+            const nota = DB.getById('notas', id);
+            if (!nota) {
+                throw new Error('La nota no existe');
+            }
+
+            // Eliminar de la base de datos
+            const resultado = DB.delete('notas', id);
+            
+            if (!resultado) {
+                throw new Error('No se pudo eliminar la nota');
+            }
+            
+            // Actualizar lista de notas
+            this.mostrarNotas();
+            
+            // Notificar al usuario
+            UI.mostrarNotificacion('Nota eliminada correctamente', 'success');
+            
+            // Disparar eventos específicos
+            document.dispatchEvent(new CustomEvent('notaEliminada', { 
+                detail: { id: id } 
+            }));
+            document.dispatchEvent(new CustomEvent('datosActualizados', { 
+                detail: { tipo: 'notas' } 
+            }));
+
+            // Actualizar el dashboard si existe
+            if (window.app && typeof window.app.actualizarDashboard === 'function') {
+                window.app.actualizarDashboard();
+            }
+        } catch (error) {
+            console.error('Error al eliminar la nota:', error);
+            UI.mostrarNotificacion(`Error al eliminar la nota: ${error.message}`, 'error');
+        }
+    },
+
+    // Finalizar nota
+    finalizarNota(id) {
+        const nota = DB.getById('notas', id);
+        if (!nota) {
+            UI.mostrarNotificacion('Nota no encontrada', 'error');
+            return;
+        }
+
+        // Marcar como finalizada
+        nota.estado = 'finalizado';
+        nota.fechaFinalizacion = new Date().toISOString();
+
+        // Actualizar en la base de datos
+        DB.update('notas', id, nota);
+
+        // Mostrar notificación
+        UI.mostrarNotificacion('Nota finalizada correctamente', 'success');
+
+        // Actualizar la vista
         this.mostrarNotas();
-        
-        // Notificar al usuario
-        UI.mostrarNotificacion('Nota eliminada correctamente', 'success');
-        
-        // Disparar eventos específicos
-        document.dispatchEvent(new CustomEvent('notaEliminada', { 
-            detail: { id: id } 
-        }));
-        document.dispatchEvent(new CustomEvent('datosActualizados', { 
-            detail: { tipo: 'notas' } 
+
+        // Disparar evento para actualizar el historial
+        document.dispatchEvent(new CustomEvent('notaFinalizada', { 
+            detail: { notaId: id } 
         }));
     }
 };

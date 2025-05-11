@@ -2062,6 +2062,68 @@ window.app = {
             console.error('Error al exportar Excel:', error);
             UI.mostrarNotificacion('Error al generar el Excel', 'error');
         }
+    },
+
+    // Cargar plantilla del sidebar
+    loadSidebar() {
+        const template = `
+            <div class="sidebar-header">
+                <h3>Gestión Niso</h3>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="dashboard">
+                        <i class="fas fa-chart-line"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="notas">
+                        <i class="fas fa-sticky-note"></i> Notas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="historial">
+                        <i class="fas fa-history"></i> Historial General
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="personal">
+                        <i class="fas fa-users"></i> Personal
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="inventario">
+                        <i class="fas fa-boxes"></i> Inventario
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="operaciones">
+                        <i class="fas fa-cogs"></i> Operaciones
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="elaboracion">
+                        <i class="fas fa-industry"></i> Elaboración
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="nomina">
+                        <i class="fas fa-file-invoice-dollar"></i> Nómina
+                    </a>
+                </li>
+            </ul>
+        `;
+        
+        document.getElementById('sidebar').innerHTML = template;
+        
+        // Configurar eventos de navegación
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = e.target.closest('.nav-link').getAttribute('data-section');
+                this.navigateTo(section);
+            });
+        });
     }
 };
 

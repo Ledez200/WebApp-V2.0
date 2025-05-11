@@ -451,14 +451,18 @@ const Inventario = {
             m.elaboracionId === elaboracion.id && m.tipo === 'salida'
         );
         
-        // Eliminar movimientos anteriores
+        // En lugar de eliminar los movimientos anteriores, los marcamos como históricos
         if (movimientosPrevios.length > 0) {
             movimientosPrevios.forEach(mov => {
-                DB.delete('inventario', mov.id);
+                DB.update('inventario', mov.id, {
+                    ...mov,
+                    estado: 'historico',
+                    nota: 'Movimiento histórico por actualización de elaboración'
+                });
             });
             
-            // Mostrar notificación de que se han eliminado los movimientos previos
-            UI.mostrarNotificacion('Inventario', 'Se han eliminado los movimientos anteriores de esta elaboración', 'info');
+            // Mostrar notificación informativa
+            UI.mostrarNotificacion('Inventario', 'Los movimientos anteriores han sido marcados como históricos', 'info');
         }
         
         // El módulo Elaboración se encargará de crear los nuevos movimientos
