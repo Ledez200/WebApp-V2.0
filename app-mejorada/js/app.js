@@ -51,14 +51,11 @@ window.app = {
     
     // Configurar navegación
     setupNavigation() {
-        console.log('Configurando navegación...');
-        
-        // Añadir manejadores de eventos a los enlaces del sidebar
+        // Añadir manejadores de eventos a los enlaces del sidebar si no se han configurado
         const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('Enlace del sidebar clickeado:', link.getAttribute('data-section'));
                 
                 // Quitar clase active de todos los enlaces
                 navLinks.forEach(l => l.classList.remove('active'));
@@ -70,22 +67,17 @@ window.app = {
                 const sectionId = link.getAttribute('data-section');
                 
                 // Cambiar título de la sección
-                const sectionTitle = document.getElementById('sectionTitle');
-                if (sectionTitle) {
-                    sectionTitle.textContent = this.getSectionTitle(sectionId);
-                }
+                document.getElementById('sectionTitle').textContent = this.getSectionTitle(sectionId);
                 
                 // Ocultar todas las secciones
-                document.querySelectorAll('.content-section, .dashboard').forEach(section => {
+                document.querySelectorAll('.content-section').forEach(section => {
                     section.classList.remove('active');
-                    section.style.display = 'none';
                 });
                 
                 // Mostrar la sección seleccionada
                 const targetSection = document.getElementById(sectionId);
                 if (targetSection) {
                     targetSection.classList.add('active');
-                    targetSection.style.display = 'block';
                 }
                 
                 // Notificar cambio de sección
@@ -112,13 +104,6 @@ window.app = {
             sidebarOverlay.addEventListener('click', () => {
                 this.closeMobileMenu();
             });
-        }
-
-        // Mostrar la sección dashboard por defecto
-        const defaultSection = document.getElementById('dashboard');
-        if (defaultSection) {
-            defaultSection.classList.add('active');
-            defaultSection.style.display = 'block';
         }
     },
     
@@ -197,108 +182,38 @@ window.app = {
             await this.actualizarFechaActual();
             console.log('Fecha actual actualizada');
             
-            // Actualizar próximas actividades de congelado
-            const proximasActividadesCongelado = document.getElementById('proximasActividadesCongelado');
-            if (proximasActividadesCongelado) {
-                const actividades = this.getProximasActividades(7).filter(act => 
-                    act.tipo === 'nota' && act.area.toLowerCase().includes('congelado')
-                );
-                
-                if (actividades.length > 0) {
-                    proximasActividadesCongelado.innerHTML = actividades.map(act => `
-                        <div class="actividad-item">
-                            <div class="actividad-fecha">${new Date(act.fecha).toLocaleDateString()}</div>
-                            <div class="actividad-titulo">${act.titulo}</div>
-                            <div class="actividad-detalle">${act.detalle}</div>
-                            ${act.personasNombres.length > 0 ? 
-                                `<div class="actividad-personas">
-                                    <i class="fas fa-users me-1"></i>
-                                    ${act.personasNombres.join(', ')}
-                                </div>` : ''}
-                        </div>
-                    `).join('');
-                } else {
-                    proximasActividadesCongelado.innerHTML = '<div class="text-muted">No hay actividades programadas</div>';
-                }
-            }
-
-            // Actualizar próximas descargas
-            const proximasDescargas = document.getElementById('proximasDescargas');
-            if (proximasDescargas) {
-                const descargas = this.getProximasActividades(7).filter(act => 
-                    act.tipo === 'operacion' && act.tipoOperacion === 'Descarga'
-                );
-                
-                if (descargas.length > 0) {
-                    proximasDescargas.innerHTML = descargas.map(desc => `
-                        <div class="actividad-item">
-                            <div class="actividad-fecha">${new Date(desc.fecha).toLocaleDateString()}</div>
-                            <div class="actividad-titulo">${desc.titulo}</div>
-                            <div class="actividad-detalle">${desc.detalle}</div>
-                            ${desc.personasNombres.length > 0 ? 
-                                `<div class="actividad-personas">
-                                    <i class="fas fa-users me-1"></i>
-                                    ${desc.personasNombres.join(', ')}
-                                </div>` : ''}
-                        </div>
-                    `).join('');
-                } else {
-                    proximasDescargas.innerHTML = '<div class="text-muted">No hay descargas programadas</div>';
-                }
-            }
-
             // Actualizar actividades de hoy
-            const actividadesHoy = document.getElementById('actividadesHoy');
-            if (actividadesHoy) {
-                const actividades = this.getActividadesHoy();
-                
-                if (actividades.length > 0) {
-                    actividadesHoy.innerHTML = actividades.map(act => `
-                        <div class="actividad-item">
-                            <div class="actividad-titulo">${act.titulo}</div>
-                            <div class="actividad-detalle">${act.detalle}</div>
-                            ${act.personasNombres.length > 0 ? 
-                                `<div class="actividad-personas">
-                                    <i class="fas fa-users me-1"></i>
-                                    ${act.personasNombres.join(', ')}
-                                </div>` : ''}
-                        </div>
-                    `).join('');
-                } else {
-                    actividadesHoy.innerHTML = '<div class="text-muted">No hay actividades para hoy</div>';
-                }
-            }
-
-            // Actualizar resumen de operaciones
-            const resumenOperaciones = document.getElementById('resumenOperaciones');
-            if (resumenOperaciones) {
-                const operaciones = DB.getAll('operaciones');
-                const operacionesPendientes = operaciones.filter(op => op.estado === 'pendiente');
-                const operacionesCompletadas = operaciones.filter(op => op.estado === 'completado');
-                
-                resumenOperaciones.innerHTML = `
-                    <div class="resumen-item">
-                        <div class="resumen-titulo">Total de Operaciones</div>
-                        <div class="resumen-valor">${operaciones.length}</div>
-                    </div>
-                    <div class="resumen-item">
-                        <div class="resumen-titulo">Pendientes</div>
-                        <div class="resumen-valor">${operacionesPendientes.length}</div>
-                    </div>
-                    <div class="resumen-item">
-                        <div class="resumen-titulo">Completadas</div>
-                        <div class="resumen-valor">${operacionesCompletadas.length}</div>
-                    </div>
-                `;
-            }
-
-            // Actualizar gráficos si el módulo Dashboard está disponible
-            if (window.Dashboard && typeof window.Dashboard.actualizarGraficos === 'function') {
-                window.Dashboard.actualizarGraficos();
-                console.log('Gráficos actualizados correctamente');
-            }
+            await this.actualizarActividadesHoy();
+            console.log('Actividades de hoy actualizadas');
+            
+            // Actualizar próximas actividades
+            await this.actualizarProximasActividades();
+            console.log('Próximas actividades actualizadas');
+            
+            // Actualizar operaciones recientes
+            await this.actualizarOperacionesRecientes();
+            console.log('Operaciones recientes actualizadas');
+            
+            // Actualizar estadísticas semanales
+            await this.actualizarEstadisticasSemanales();
+            console.log('Estadísticas semanales actualizadas');
+            
+            // Actualizar gráficos
+            await this.actualizarGraficos();
+            console.log('Gráficos actualizados');
+            
+            // Actualizar operaciones del dashboard
+            await this.actualizarOperacionesDashboard();
+            console.log('Operaciones del dashboard actualizadas');
+            
+            // Actualizar notas del dashboard
+            await this.actualizarNotasDashboard();
+            console.log('Notas del dashboard actualizadas');
+            
+            console.log('Dashboard actualizado completamente');
         } catch (error) {
             console.error('Error al actualizar el dashboard:', error);
+            UI.mostrarNotificacion('Error al actualizar el dashboard', 'error');
         }
     },
 
@@ -1549,67 +1464,6 @@ window.app = {
         const todas = [...notas, ...operaciones, ...elaboraciones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
         
         return todas;
-    },
-
-    // Obtener actividades programadas para hoy
-    getActividadesHoy() {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        const hoyStr = hoy.toISOString().split('T')[0];
-        
-        // Obtener operaciones para hoy
-        const operaciones = DB.getAll('operaciones')
-            .filter(op => op.fecha === hoyStr && op.estado !== 'completado')
-            .map(op => ({
-                id: op.id,
-                tipo: 'operacion',
-                titulo: `${op.tipo}: ${op.lugar}`,
-                detalle: op.descripcion || '',
-                personasNombres: op.personasNombres || [],
-                estado: op.estado || 'pendiente'
-            }));
-
-        // Obtener notas para hoy
-        const notas = DB.getAll('notas')
-            .filter(nota => {
-                const fechaNota = new Date(nota.fecha);
-                return fechaNota >= hoy && 
-                       fechaNota < new Date(hoy.getTime() + 24 * 60 * 60 * 1000) &&
-                       nota.estado !== 'completado';
-            })
-            .map(nota => ({
-                id: nota.id,
-                tipo: 'nota',
-                titulo: nota.area,
-                detalle: nota.contenido,
-                personasNombres: nota.personasNombres || [],
-                estado: nota.estado || 'pendiente'
-            }));
-
-        // Obtener elaboraciones para hoy
-        const elaboraciones = DB.getAll('elaboraciones')
-            .filter(elab => {
-                const fechaElab = new Date(elab.fecha);
-                return fechaElab >= hoy && 
-                       fechaElab < new Date(hoy.getTime() + 24 * 60 * 60 * 1000) &&
-                       elab.estado !== 'completado';
-            })
-            .map(elab => ({
-                id: elab.id,
-                tipo: 'elaboracion',
-                titulo: elab.titulo || 'Elaboración',
-                detalle: elab.descripcion || '',
-                personasNombres: elab.personasNombres || [],
-                estado: elab.estado || 'pendiente'
-            }));
-
-        // Combinar y ordenar todas las actividades
-        return [...operaciones, ...notas, ...elaboraciones]
-            .sort((a, b) => {
-                const fechaA = new Date(a.fecha).getTime();
-                const fechaB = new Date(b.fecha).getTime();
-                return fechaA - fechaB;
-            });
     },
 
     // Renderizar el HTML para las personas asignadas a una actividad

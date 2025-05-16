@@ -146,112 +146,41 @@
 
             <!-- Content Sections -->
             <div class="content-container">
-                <!-- Dashboard -->
-                <section id="dashboard" class="dashboard">
-                    <div class="row">
-                        <!-- Próximas actividades de congelado -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-snowflake me-2"></i>
-                                        Próximas Actividades de Congelado
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="proximasActividadesCongelado" class="actividades-lista">
-                                        <!-- Las actividades se cargarán dinámicamente -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section active">
+                    <div class="container-fluid">
+                        <!-- Gráficos Section -->
+                        <!-- Eliminado: tarjetas de tendencia de producción y distribución de inventario/actividad -->
 
-                        <!-- Próximas descargas -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-truck me-2"></i>
-                                        Próximas Descargas
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="proximasDescargas" class="actividades-lista">
-                                        <!-- Las descargas se cargarán dinámicamente -->
+                        <!-- Actividades y Operaciones Section -->
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="card-title">
+                                            <i class="fas fa-snowflake me-2"></i>
+                                            Próximas actividades de congelado
+                                        </h5>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Estadísticas Generales -->
-                        <div class="col-12 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-chart-line me-2"></i>
-                                        Estadísticas Generales
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <!-- Gráfico de tendencias -->
-                                        <div class="col-md-6 mb-4">
-                                            <div class="chart-container">
-                                                <canvas id="tendenciasChart"></canvas>
-                                            </div>
-                                        </div>
-                                        <!-- Gráfico de barras apiladas -->
-                                        <div class="col-md-6 mb-4">
-                                            <div class="chart-container">
-                                                <canvas id="tendenciasBarrasChart"></canvas>
-                                            </div>
-                                        </div>
-                                        <!-- Gráfico circular -->
-                                        <div class="col-md-6 mb-4">
-                                            <div class="chart-container">
-                                                <canvas id="actividadPieChart"></canvas>
-                                            </div>
-                                        </div>
-                                        <!-- Gráfico de operaciones por tipo -->
-                                        <div class="col-md-6 mb-4">
-                                            <div class="chart-container">
-                                                <canvas id="operacionesPorTipoChart"></canvas>
-                                            </div>
+                                    <div class="card-body">
+                                        <div id="proximasActividades" class="actividades-container">
+                                            <!-- Las actividades se cargarán dinámicamente -->
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Actividades de hoy -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-calendar-day me-2"></i>
-                                        Actividades de Hoy
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="actividadesHoy" class="actividades-lista">
-                                        <!-- Las actividades se cargarán dinámicamente -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="card-title">
+                                            <i class="fas fa-truck-loading me-2"></i>
+                                            Próximas Descargas
+                                        </h5>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Resumen de operaciones -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-tasks me-2"></i>
-                                        Resumen de Operaciones
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="resumenOperaciones" class="actividades-lista">
-                                        <!-- El resumen se cargará dinámicamente -->
+                                    <div class="card-body">
+                                        <div id="proximasOperaciones" class="operaciones-container">
+                                            <!-- Las operaciones se cargarán dinámicamente -->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
