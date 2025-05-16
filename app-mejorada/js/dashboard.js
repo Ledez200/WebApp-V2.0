@@ -1,214 +1,405 @@
-// Procesar datos de tendencias para operaciones y notas (reforzado)
+// Función para procesar los datos de tendencias
 function procesarDatosTendenciasCompletas() {
-    const operaciones = JSON.parse(localStorage.getItem('operaciones')) || [];
-    const notas = JSON.parse(localStorage.getItem('notas')) || [];
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const labels = [];
-    const datosOperaciones = Array(7).fill(0);
-    const datosNotas = Array(7).fill(0);
-    const dias = [];
+    try {
+        // Obtener datos del localStorage y verificar su contenido
+        const operacionesRaw = localStorage.getItem('gp_operaciones');
+        const notasRaw = localStorage.getItem('gp_notas');
+        const elaboracionesRaw = localStorage.getItem('gp_elaboraciones');
+        
+        console.log('Datos raw del localStorage:', {
+            operaciones: operacionesRaw,
+            notas: notasRaw,
+            elaboraciones: elaboracionesRaw
+        });
 
-    // Crear fechas base para los últimos 7 días
-    for (let i = 6; i >= 0; i--) {
-        const fecha = new Date(hoy);
-        fecha.setDate(fecha.getDate() - i);
-        fecha.setHours(0, 0, 0, 0);
-        dias.push(new Date(fecha));
-        labels.push(fecha.toLocaleDateString('es-ES', { weekday: 'short' }));
-    }
-
-    // Función para normalizar fecha (solo día)
-    function normalizarFecha(fechaStr) {
-        if (!fechaStr) return null;
-        let fecha;
-        // Si es ISO o tiene T
-        if (fechaStr.includes('T')) {
-            fecha = new Date(fechaStr);
-        } else {
-            // Si es solo YYYY-MM-DD
-            fecha = new Date(fechaStr + 'T00:00:00');
+        const operaciones = operacionesRaw ? JSON.parse(operacionesRaw) : [];
+        const notas = notasRaw ? JSON.parse(notasRaw) : [];
+        const elaboraciones = elaboracionesRaw ? JSON.parse(elaboracionesRaw) : [];
+        
+        console.log('Datos parseados:', {
+            operaciones,
+            notas,
+            elaboraciones
+        });
+        
+        // Obtener las últimas 7 fechas
+        const hoy = new Date();
+        const labels = [];
+        const datosOperaciones = [];
+        const datosNotas = [];
+        const datosElaboraciones = [];
+        
+        // Inicializar contadores para los últimos 7 días
+        for (let i = 6; i >= 0; i--) {
+            const fecha = new Date(hoy);
+            fecha.setDate(hoy.getDate() - i);
+            const fechaStr = fecha.toISOString().split('T')[0];
+            
+            // Formatear la etiqueta para mostrar día y fecha
+            const label = fecha.toLocaleDateString('es-ES', { 
+                weekday: 'short',
+                day: '2-digit',
+                month: '2-digit'
+            });
+            labels.push(label);
+            
+            // Contar operaciones para esta fecha
+            const operacionesDia = operaciones.filter(op => {
+                if (!op.fecha) {
+                    console.warn('Operación sin fecha:', op);
+                    return false;
+                }
+                const fechaOp = new Date(op.fecha);
+                const fechaOpStr = fechaOp.toISOString().split('T')[0];
+                console.log(`Comparando fechas - Operación: ${fechaOpStr}, Fecha objetivo: ${fechaStr}`);
+                return fechaOpStr === fechaStr;
+            }).length;
+            
+            // Contar notas para esta fecha
+            const notasDia = notas.filter(nota => {
+                if (!nota.fecha) {
+                    console.warn('Nota sin fecha:', nota);
+                    return false;
+                }
+                const fechaNota = new Date(nota.fecha);
+                const fechaNotaStr = fechaNota.toISOString().split('T')[0];
+                console.log(`Comparando fechas - Nota: ${fechaNotaStr}, Fecha objetivo: ${fechaStr}`);
+                return fechaNotaStr === fechaStr;
+            }).length;
+            
+            // Contar elaboraciones para esta fecha
+            const elaboracionesDia = elaboraciones.filter(elab => {
+                if (!elab.fecha) {
+                    console.warn('Elaboración sin fecha:', elab);
+                    return false;
+                }
+                const fechaElab = new Date(elab.fecha);
+                const fechaElabStr = fechaElab.toISOString().split('T')[0];
+                console.log(`Comparando fechas - Elaboración: ${fechaElabStr}, Fecha objetivo: ${fechaStr}`);
+                return fechaElabStr === fechaStr;
+            }).length;
+            
+            console.log(`Conteo para ${fechaStr}:`, {
+                operaciones: operacionesDia,
+                notas: notasDia,
+                elaboraciones: elaboracionesDia
+            });
+            
+            datosOperaciones.push(operacionesDia);
+            datosNotas.push(notasDia);
+            datosElaboraciones.push(elaboracionesDia);
         }
-        fecha.setHours(0, 0, 0, 0);
-        return fecha;
+        
+        // Calcular totales
+        const totalOperaciones = operaciones.length;
+        const totalNotas = notas.length;
+        const totalElaboraciones = elaboraciones.length;
+        
+        // Calcular estadísticas por tipo de operación
+        const operacionesPorTipo = operaciones.reduce((acc, op) => {
+            const tipo = op.tipo || 'Sin tipo';
+            acc[tipo] = (acc[tipo] || 0) + 1;
+            return acc;
+        }, {});
+        
+        // Calcular estadísticas por área de elaboración
+        const elaboracionesPorArea = elaboraciones.reduce((acc, elab) => {
+            const area = elab.area || 'Sin área';
+            acc[area] = (acc[area] || 0) + 1;
+            return acc;
+        }, {});
+        
+        const resultado = {
+            labels,
+            datosOperaciones,
+            datosNotas,
+            datosElaboraciones,
+            totalOperaciones,
+            totalNotas,
+            totalElaboraciones,
+            operacionesPorTipo,
+            elaboracionesPorArea
+        };
+        
+        console.log('Resultado final del procesamiento:', resultado);
+        
+        return resultado;
+    } catch (error) {
+        console.error('Error al procesar datos de tendencias:', error);
+        return {
+            labels: [],
+            datosOperaciones: [],
+            datosNotas: [],
+            datosElaboraciones: [],
+            totalOperaciones: 0,
+            totalNotas: 0,
+            totalElaboraciones: 0,
+            operacionesPorTipo: {},
+            elaboracionesPorArea: {}
+        };
     }
-
-    // Contar operaciones por día
-    operaciones.forEach(op => {
-        const fechaOp = normalizarFecha(op.fecha);
-        if (!fechaOp) return;
-        dias.forEach((dia, idx) => {
-            if (fechaOp.getTime() === dia.getTime()) {
-                datosOperaciones[idx]++;
-            }
-        });
-    });
-    // Contar notas por día
-    notas.forEach(nota => {
-        const fechaNota = normalizarFecha(nota.fecha);
-        if (!fechaNota) return;
-        dias.forEach((dia, idx) => {
-            if (fechaNota.getTime() === dia.getTime()) {
-                datosNotas[idx]++;
-            }
-        });
-    });
-
-    // Logs de depuración
-    console.log('Días:', dias.map(d => d.toISOString().split('T')[0]));
-    console.log('Operaciones:', operaciones.map(o => o.fecha));
-    console.log('Notas:', notas.map(n => n.fecha));
-    console.log('Datos operaciones:', datosOperaciones);
-    console.log('Datos notas:', datosNotas);
-
-    return {
-        labels,
-        datosOperaciones,
-        datosNotas,
-        totalOperaciones: operaciones.length,
-        totalNotas: notas.length
-    };
 }
 
 // Gráfico de líneas (tendencias)
 function crearGraficoTendencias() {
-    const ctx = document.getElementById('tendenciasChart').getContext('2d');
-    const noDataElement = document.getElementById('tendenciasNoData');
+    const ctx = document.getElementById('tendenciasChart');
+    if (!ctx) {
+        console.warn('No se encontró el elemento canvas para el gráfico de tendencias');
+        return;
+    }
+
     const datos = procesarDatosTendenciasCompletas();
-    const hayDatos = datos.datosOperaciones.some(v => v > 0) || datos.datosNotas.some(v => v > 0);
-    if (window.tendenciasChart && typeof window.tendenciasChart.destroy === 'function') {
+    
+    // Destruir el gráfico existente si existe
+    if (window.tendenciasChart instanceof Chart) {
         window.tendenciasChart.destroy();
     }
-    if (hayDatos) {
-        noDataElement.style.display = 'none';
-        window.tendenciasChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: datos.labels,
-                datasets: [
-                    {
-                        label: 'Operaciones',
-                        data: datos.datosOperaciones,
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Notas',
-                        data: datos.datosNotas,
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' }
+    
+    window.tendenciasChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: datos.labels,
+            datasets: [
+                {
+                    label: 'Operaciones',
+                    data: datos.datosOperaciones,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
                 },
-                scales: {
-                    y: { beginAtZero: true }
+                {
+                    label: 'Notas',
+                    data: datos.datosNotas,
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Tendencias de Actividad'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
                 }
             }
-        });
-    } else {
-        noDataElement.style.display = 'block';
-    }
+        }
+    });
 }
 
 // Gráfico de barras apiladas
 function crearGraficoBarrasTendencias() {
-    const ctx = document.getElementById('tendenciasBarrasChart').getContext('2d');
+    const ctx = document.getElementById('tendenciasBarrasChart');
+    if (!ctx) {
+        console.warn('No se encontró el elemento canvas para el gráfico de barras');
+        return;
+    }
+
     const datos = procesarDatosTendenciasCompletas();
-    const hayDatos = datos.datosOperaciones.some(v => v > 0) || datos.datosNotas.some(v => v > 0);
-    if (window.tendenciasBarrasChart && typeof window.tendenciasBarrasChart.destroy === 'function') {
+    
+    // Destruir el gráfico existente si existe
+    if (window.tendenciasBarrasChart instanceof Chart) {
         window.tendenciasBarrasChart.destroy();
     }
-    if (hayDatos) {
-        window.tendenciasBarrasChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: datos.labels,
-                datasets: [
-                    {
-                        label: 'Operaciones',
-                        data: datos.datosOperaciones,
-                        backgroundColor: '#4CAF50',
-                        stack: 'Stack 0'
-                    },
-                    {
-                        label: 'Notas',
-                        data: datos.datosNotas,
-                        backgroundColor: '#2196F3',
-                        stack: 'Stack 0'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' }
+    
+    window.tendenciasBarrasChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: datos.labels,
+            datasets: [
+                {
+                    label: 'Operaciones',
+                    data: datos.datosOperaciones,
+                    backgroundColor: '#4CAF50',
+                    stack: 'Stack 0'
                 },
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, beginAtZero: true }
+                {
+                    label: 'Notas',
+                    data: datos.datosNotas,
+                    backgroundColor: '#2196F3',
+                    stack: 'Stack 0'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Actividad Acumulada'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 // Gráfico circular de proporción total
 function crearGraficoActividadPie() {
-    const ctx = document.getElementById('actividadPieChart').getContext('2d');
-    const noDataElement = document.getElementById('actividadNoData');
+    const ctx = document.getElementById('actividadPieChart');
+    if (!ctx) {
+        console.warn('No se encontró el elemento canvas para el gráfico circular');
+        return;
+    }
+
     const datos = procesarDatosTendenciasCompletas();
-    if (window.actividadPieChart && typeof window.actividadPieChart.destroy === 'function') {
+    
+    // Destruir el gráfico existente si existe
+    if (window.actividadPieChart instanceof Chart) {
         window.actividadPieChart.destroy();
     }
-    if (datos.totalOperaciones > 0 || datos.totalNotas > 0) {
-        noDataElement.style.display = 'none';
-        window.actividadPieChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Operaciones', 'Notas'],
-                datasets: [{
-                    data: [datos.totalOperaciones, datos.totalNotas],
-                    backgroundColor: ['#4CAF50', '#2196F3']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' }
+    
+    window.actividadPieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Operaciones', 'Notas'],
+            datasets: [{
+                data: [datos.totalOperaciones, datos.totalNotas],
+                backgroundColor: ['#4CAF50', '#2196F3']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Distribución de Actividad'
+                },
+                legend: {
+                    position: 'right'
                 }
             }
-        });
-    } else {
-        noDataElement.style.display = 'block';
-    }
+        }
+    });
 }
 
-// Inicializar el dashboard
-function inicializarDashboard() {
-    if (window.tendenciasChart && typeof window.tendenciasChart.destroy === 'function') {
-        window.tendenciasChart.destroy();
+// Gráfico de operaciones por tipo
+function crearGraficoOperacionesPorTipo() {
+    const ctx = document.getElementById('operacionesPorTipoChart');
+    if (!ctx) {
+        console.warn('No se encontró el elemento canvas para el gráfico de operaciones por tipo');
+        return;
     }
-    if (window.tendenciasBarrasChart && typeof window.tendenciasBarrasChart.destroy === 'function') {
-        window.tendenciasBarrasChart.destroy();
+
+    const operacionesRaw = localStorage.getItem('gp_operaciones');
+    const operaciones = operacionesRaw ? JSON.parse(operacionesRaw) : [];
+    
+    // Agrupar operaciones por tipo
+    const tiposOperaciones = operaciones.reduce((acc, op) => {
+        const tipo = op.tipo || 'Sin tipo';
+        acc[tipo] = (acc[tipo] || 0) + 1;
+        return acc;
+    }, {});
+    
+    // Destruir el gráfico existente si existe
+    if (window.operacionesPorTipoChart instanceof Chart) {
+        window.operacionesPorTipoChart.destroy();
     }
-    if (window.actividadPieChart && typeof window.actividadPieChart.destroy === 'function') {
-        window.actividadPieChart.destroy();
-    }
+    
+    window.operacionesPorTipoChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(tiposOperaciones),
+            datasets: [{
+                label: 'Cantidad de Operaciones',
+                data: Object.values(tiposOperaciones),
+                backgroundColor: [
+                    '#4CAF50',
+                    '#2196F3',
+                    '#FFC107',
+                    '#9C27B0',
+                    '#F44336'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Operaciones por Tipo'
+                },
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Inicializar todos los gráficos
+function inicializarGraficos() {
     crearGraficoTendencias();
     crearGraficoBarrasTendencias();
     crearGraficoActividadPie();
+    crearGraficoOperacionesPorTipo();
 }
 
-document.addEventListener('DOMContentLoaded', inicializarDashboard); 
+// Actualizar los gráficos cuando cambien los datos
+function actualizarGraficos() {
+    try {
+        console.log('Iniciando actualización de gráficos...');
+        const datos = procesarDatosTendenciasCompletas();
+        
+        // Actualizar cada gráfico
+        crearGraficoTendencias();
+        crearGraficoBarrasTendencias();
+        crearGraficoActividadPie();
+        crearGraficoOperacionesPorTipo();
+        
+        console.log('Gráficos actualizados correctamente');
+    } catch (error) {
+        console.error('Error al actualizar gráficos:', error);
+    }
+}
+
+// Exportar funciones
+window.Dashboard = {
+    inicializarGraficos,
+    actualizarGraficos
+};
+
+document.addEventListener('DOMContentLoaded', inicializarGraficos); 

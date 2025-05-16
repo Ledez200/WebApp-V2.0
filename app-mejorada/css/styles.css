@@ -170,6 +170,7 @@ ul {
     transition: all 0.3s ease;
     font-size: 0.9rem;
     font-weight: 500;
+    cursor: pointer;
 }
 
 .sidebar-nav .nav-link:hover {
@@ -179,10 +180,11 @@ ul {
 }
 
 .sidebar-nav .nav-link.active {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
     font-weight: 600;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #007bff;
 }
 
 .sidebar-nav .nav-link i {
@@ -337,9 +339,18 @@ header h2 {
 /* Section Styles */
 .content-section {
     display: none;
+    padding: 20px;
 }
 
 .content-section.active {
+    display: block;
+}
+
+.dashboard {
+    display: none;
+}
+
+.dashboard.active {
     display: block;
 }
 
@@ -2829,4 +2840,124 @@ canvas {
 /* Ocultar columna de insumos en historial de elaboraciones */
 .col-insumos {
   display: none !important;
+}
+
+/* Estilos para las tarjetas del dashboard */
+.dashboard .card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.dashboard .card:hover {
+    transform: translateY(-2px);
+}
+
+.dashboard .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem;
+}
+
+.dashboard .card-title {
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.dashboard .card-body {
+    padding: 1.25rem;
+}
+
+/* Estilos para las actividades */
+.actividades-lista {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.actividad-item {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+.actividad-item:last-child {
+    border-bottom: none;
+}
+
+.actividad-item:hover {
+    background-color: #f8f9fa;
+}
+
+.actividad-fecha {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.actividad-titulo {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.actividad-detalle {
+    font-size: 0.9rem;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.actividad-personas {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Estilos para el resumen de operaciones */
+.resumen-item {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.resumen-item:last-child {
+    border-bottom: none;
+}
+
+.resumen-titulo {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.resumen-valor {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Estilos para los gráficos */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 1rem;
+}
+
+/* Estilos para el scrollbar de las listas */
+.actividades-lista::-webkit-scrollbar {
+    width: 6px;
+}
+
+.actividades-lista::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.actividades-lista::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.actividades-lista::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
