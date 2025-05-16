@@ -627,46 +627,51 @@ const Operaciones = {
         const operaciones = this.getOperacionesFiltradas();
         const activas = operaciones.filter(op => op.estado !== 'finalizado' && op.estado !== 'completado');
         const archivo = operaciones.filter(op => op.estado === 'finalizado' || op.estado === 'completado');
+        
+        // Actualizar contenido de las pestañas
         document.getElementById('listaOperacionesActivas').innerHTML = this.generarHTMLOperaciones(activas);
         document.getElementById('listaOperacionesArchivo').innerHTML = this.generarHTMLOperaciones(archivo, true);
+        
+        // Configurar eventos de los botones después de actualizar el contenido
+        this.setupBotonesOperaciones();
     },
 
     // Generar HTML de operaciones
     generarHTMLOperaciones(ops, esArchivo = false) {
         let html = '';
+        
+        if (ops.length === 0) {
+            return `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No hay operaciones ${esArchivo ? 'archivadas' : 'activas'} que mostrar
+                </div>
+            `;
+        }
+
         ops.forEach(op => {
-            // Formatear fecha
             const fecha = new Date(op.fecha);
-            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const fechaFormateada = fecha.toLocaleDateString('es-ES', opciones);
+            const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const operacionClass = op.estado === 'completado' ? 'completada' : '';
+            const badgeClass = op.tipo === 'Descarga' ? 'bg-success' : 'bg-warning';
             
-            // Determinar clase para el tipo de operación
-            let tipoClass = '';
-            let badgeClass = '';
-            let operacionClass = '';
-            
-            switch (op.tipo) {
-                case 'Descarga':
-                    tipoClass = 'bg-success';
-                    badgeClass = 'badge-descarga';
-                    operacionClass = 'operacion-descarga';
-                    break;
-                case 'Clasificación':
-                    tipoClass = 'bg-warning';
-                    badgeClass = 'badge-clasificacion';
-                    operacionClass = 'operacion-clasificacion';
-                    break;
-                default:
-                    tipoClass = 'bg-secondary';
-                    operacionClass = 'operacion-default';
-            }
-            
-            // Información de personas asignadas
+            // Generar HTML para las personas asignadas
             let personasInfo = '';
-            if (op.personasInfo) {
-                personasInfo = `<div class="mt-1"><small><i class="fas fa-users me-1"></i>Asignada a: ${op.personasInfo}</small></div>`;
-            } else if (op.personasNombres && op.personasNombres.length > 0) {
-                personasInfo = `<div class="mt-1"><small><i class="fas fa-users me-1"></i>Asignada a: ${op.personasNombres.join(', ')}</small></div>`;
+            if (op.personasNombres && op.personasNombres.length > 0) {
+                personasInfo = `
+                    <div class="operacion-personas mt-2">
+                        <i class="fas fa-users me-1"></i>
+                        ${op.personasNombres.join(', ')}
+                    </div>
+                `;
             }
 
             html += `
@@ -683,15 +688,17 @@ const Operaciones = {
                         ${personasInfo}
                     </div>
                     <div class="operacion-actions">
-                        <button class="btn btn-sm btn-outline-info btn-ver-operacion" data-id="${op.id}">
+                        <button class="btn btn-sm btn-outline-info btn-ver-operacion" data-id="${op.id}" title="Ver detalles">
                             <i class="fas fa-eye"></i> Ver
                         </button>
-                        <button class="btn btn-sm btn-outline-primary btn-editar-operacion" data-id="${op.id}">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger btn-eliminar-operacion" data-id="${op.id}">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
+                        ${!esArchivo ? `
+                            <button class="btn btn-sm btn-outline-primary btn-editar-operacion" data-id="${op.id}" title="Editar operación">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-eliminar-operacion" data-id="${op.id}" title="Eliminar operación">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -705,7 +712,9 @@ const Operaciones = {
         document.querySelectorAll('.btn-ver-operacion').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.closest('button').dataset.id;
-                this.verOperacion(id);
+                if (id) {
+                    this.verOperacion(id);
+                }
             });
         });
 
@@ -713,7 +722,9 @@ const Operaciones = {
         document.querySelectorAll('.btn-editar-operacion').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.closest('button').dataset.id;
-                this.editarOperacion(id);
+                if (id) {
+                    this.editarOperacion(id);
+                }
             });
         });
 
@@ -721,7 +732,9 @@ const Operaciones = {
         document.querySelectorAll('.btn-eliminar-operacion').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.target.closest('button').dataset.id;
-                this.eliminarOperacion(id);
+                if (id) {
+                    this.confirmarEliminarOperacion(id);
+                }
             });
         });
     },
@@ -734,26 +747,19 @@ const Operaciones = {
             return;
         }
 
-        const fechaFormateada = new Date(operacion.fecha).toLocaleDateString('es-ES', {
+        const fecha = new Date(operacion.fecha);
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
         });
 
-        // Obtener la información de las personas
+        // Generar HTML para las personas asignadas
         let personasHTML = '<p class="text-muted"><i class="fas fa-info-circle me-2"></i>No hay personal asignado</p>';
-        if (operacion.personasInfo) {
-            personasHTML = `
-                <ul class="list-group">
-                    ${operacion.personasInfo.split(',').map(persona => `
-                        <li class="list-group-item">
-                            <i class="fas fa-user me-2"></i>${persona.trim()}
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
-        } else if (operacion.personasNombres && operacion.personasNombres.length > 0) {
+        if (operacion.personasNombres && operacion.personasNombres.length > 0) {
             personasHTML = `
                 <ul class="list-group">
                     ${operacion.personasNombres.map(persona => `
@@ -811,10 +817,12 @@ const Operaciones = {
             </div>
         `;
 
+        // Agregar el modal al body y mostrarlo
         document.body.appendChild(modal);
         const modalInstance = new bootstrap.Modal(modal);
         modalInstance.show();
 
+        // Limpiar el modal cuando se cierre
         modal.addEventListener('hidden.bs.modal', () => {
             document.body.removeChild(modal);
         });
@@ -822,48 +830,35 @@ const Operaciones = {
 
     // Abrir modal para editar operación
     editarOperacion(id) {
-        // Buscar operación por ID
         const operacion = DB.getById('operaciones', id);
-        
         if (!operacion) {
             UI.mostrarNotificacion('Operación no encontrada', 'error');
             return;
         }
-        
+
         // Guardar operación que se está editando
         this.state.operacionEditando = operacion;
-        
+
         // Llenar el formulario de edición
         const fechaObj = new Date(operacion.fecha);
         const fecha = fechaObj.toISOString().split('T')[0];
         const hora = fechaObj.toTimeString().slice(0,5);
-        
+
         document.getElementById('idOperacionEditar').value = operacion.id;
         document.getElementById('tipoOperacionEditar').value = operacion.tipo;
         document.getElementById('fechaOperacionEditar').value = fecha;
         document.getElementById('horaOperacionEditar').value = hora;
         document.getElementById('lugarOperacionEditar').value = operacion.lugar;
         document.getElementById('descripcionOperacionEditar').value = operacion.descripcion;
-        
+
         // Seleccionar las personas asignadas
         const selectorPersonas = document.getElementById('personasOperacionEditar');
         if (operacion.personaIds && Array.isArray(operacion.personaIds)) {
-            // Deseleccionar todas las opciones primero
             Array.from(selectorPersonas.options).forEach(option => {
-                option.selected = false;
-            });
-            
-            // Seleccionar las opciones correspondientes a personaIds
-            operacion.personaIds.forEach(personaId => {
-                if (personaId) {
-                    const option = Array.from(selectorPersonas.options).find(opt => opt.value === personaId);
-                    if (option) {
-                        option.selected = true;
-                    }
-                }
+                option.selected = operacion.personaIds.includes(option.value);
             });
         }
-        
+
         // Mostrar modal
         const modal = new bootstrap.Modal(document.getElementById('editarOperacionModal'));
         modal.show();
@@ -941,39 +936,23 @@ const Operaciones = {
     // Confirmar eliminación de operación
     confirmarEliminarOperacion(id) {
         if (!id) {
-            UI.mostrarNotificacion('Error', 'ID de operación no válido', 'error');
+            UI.mostrarNotificacion('Error: ID de operación no válido', 'error');
             return;
         }
 
-        UI.confirmar({
-            title: 'Eliminar operación',
-            message: '¿Está seguro de eliminar esta operación? Esta acción no se puede deshacer.',
-            type: 'warning',
-            confirmText: 'Eliminar',
-            cancelText: 'Cancelar'
-        }).then(confirmed => {
-            if (confirmed) {
-                this.eliminarOperacion(id);
-            }
-        });
+        const operacion = DB.getById('operaciones', id);
+        if (!operacion) {
+            UI.mostrarNotificacion('Error: Operación no encontrada', 'error');
+            return;
+        }
+
+        if (confirm(`¿Está seguro de eliminar la operación de ${operacion.tipo} para ${operacion.lugar}? Esta acción no se puede deshacer.`)) {
+            this.eliminarOperacion(id);
+        }
     },
 
     // Eliminar operación
     eliminarOperacion(id) {
-        console.log('Intentando eliminar operación con ID:', id);
-        
-        if (!id) {
-            UI.mostrarNotificacion('Error', 'ID de operación no válido', 'error');
-            return;
-        }
-        
-        // Obtener la operación para verificar que existe
-        const operacion = DB.getById('operaciones', id);
-        if (!operacion) {
-            UI.mostrarNotificacion('Error', 'No se encontró la operación a eliminar', 'error');
-            return;
-        }
-        
         try {
             const resultado = DB.delete('operaciones', id);
             
@@ -982,9 +961,9 @@ const Operaciones = {
                 this.mostrarOperaciones();
                 
                 // Notificar éxito
-                UI.mostrarNotificacion('Éxito', 'Operación eliminada correctamente', 'success');
+                UI.mostrarNotificacion('Operación eliminada correctamente', 'success');
                 
-                // Disparar eventos específicos
+                // Disparar eventos
                 document.dispatchEvent(new CustomEvent('operacionEliminada', { 
                     detail: { id: id } 
                 }));
@@ -996,7 +975,7 @@ const Operaciones = {
             }
         } catch (error) {
             console.error('Error al eliminar operación:', error);
-            UI.mostrarNotificacion('Error', 'No se pudo eliminar la operación: ' + error.message, 'error');
+            UI.mostrarNotificacion('Error al eliminar la operación: ' + error.message, 'error');
         }
     }
 };
