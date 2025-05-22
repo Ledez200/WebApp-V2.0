@@ -403,13 +403,20 @@ const DB = {
                     nombre: nomina.personaNombre,
                     horasNormales: 0,
                     horasExtras: 0,
+                    montoNormal: 0,
+                    montoExtra: 0,
                     diasTrabajados: new Set(),
                     secciones: new Set()
                 };
             }
             
-            resumen[nomina.personaId].horasNormales += nomina.horasNormales || 0;
-            resumen[nomina.personaId].horasExtras += nomina.horasExtras || 0;
+            const horasNormales = nomina.horasNormales || 0;
+            const horasExtras = nomina.horasExtras || 0;
+            
+            resumen[nomina.personaId].horasNormales += horasNormales;
+            resumen[nomina.personaId].horasExtras += horasExtras;
+            resumen[nomina.personaId].montoNormal += horasNormales * 6.875; // Precio hora normal
+            resumen[nomina.personaId].montoExtra += horasExtras * 9.00;    // Precio hora extra
             resumen[nomina.personaId].diasTrabajados.add(nomina.fecha);
             resumen[nomina.personaId].secciones.add(nomina.seccion);
         });
@@ -418,6 +425,7 @@ const DB = {
         return Object.values(resumen).map(persona => ({
             ...persona,
             totalHoras: persona.horasNormales + persona.horasExtras,
+            totalMonto: persona.montoNormal + persona.montoExtra,
             diasTrabajados: persona.diasTrabajados.size,
             secciones: Array.from(persona.secciones)
         }));

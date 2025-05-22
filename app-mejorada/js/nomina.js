@@ -15,6 +15,12 @@ const Nomina = {
         }
     },
 
+    // Constantes de precios
+    PRECIOS: {
+        HORA_NORMAL: 6.875,
+        HORA_EXTRA: 9.00
+    },
+
     // Inicializar módulo
     init() {
         // Cargar plantilla de nómina
@@ -199,6 +205,9 @@ const Nomina = {
                                             <th>Horas Normales</th>
                                             <th>Horas Extras</th>
                                             <th>Total Horas</th>
+                                            <th>Monto Normal</th>
+                                            <th>Monto Extra</th>
+                                            <th>Total Monto</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
@@ -612,14 +621,37 @@ const Nomina = {
         if (nominas.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center">No hay registros que coincidan con los filtros</td>
+                    <td colspan="10" class="text-center">No hay registros que coincidan con los filtros</td>
                 </tr>
             `;
             return;
         }
         
+        let totalGeneral = {
+            horasNormales: 0,
+            horasExtras: 0,
+            montoNormal: 0,
+            montoExtra: 0,
+            total: 0
+        };
+        
         nominas.forEach(nomina => {
-            const totalHoras = (nomina.horasNormales || 0) + (nomina.horasExtras || 0);
+            const horasNormales = nomina.horasNormales || 0;
+            const horasExtras = nomina.horasExtras || 0;
+            const totalHoras = horasNormales + horasExtras;
+            
+            // Cálculos monetarios
+            const montoNormal = horasNormales * this.PRECIOS.HORA_NORMAL;
+            const montoExtra = horasExtras * this.PRECIOS.HORA_EXTRA;
+            const totalMonto = montoNormal + montoExtra;
+            
+            // Actualizar totales generales
+            totalGeneral.horasNormales += horasNormales;
+            totalGeneral.horasExtras += horasExtras;
+            totalGeneral.montoNormal += montoNormal;
+            totalGeneral.montoExtra += montoExtra;
+            totalGeneral.total += totalMonto;
+            
             const fechaFormateada = new Date(nomina.fecha).toLocaleDateString('es-ES');
             
             const tr = document.createElement('tr');
@@ -627,9 +659,12 @@ const Nomina = {
                 <td>${nomina.personaNombre || 'Sin asignar'}</td>
                 <td>${fechaFormateada}</td>
                 <td>${nomina.seccion || 'N/A'}</td>
-                <td>${(nomina.horasNormales || 0).toFixed(1)}</td>
-                <td>${(nomina.horasExtras || 0).toFixed(1)}</td>
+                <td>${horasNormales.toFixed(1)}</td>
+                <td>${horasExtras.toFixed(1)}</td>
                 <td>${totalHoras.toFixed(1)}</td>
+                <td>${montoNormal.toFixed(2)} €</td>
+                <td>${montoExtra.toFixed(2)} €</td>
+                <td>${totalMonto.toFixed(2)} €</td>
                 <td>
                     <div class="btn-group btn-group-sm">
                         <button class="btn btn-outline-primary btn-editar" data-id="${nomina.id}">
@@ -644,6 +679,21 @@ const Nomina = {
             
             tbody.appendChild(tr);
         });
+        
+        // Agregar fila de totales
+        const trTotales = document.createElement('tr');
+        trTotales.className = 'table-primary fw-bold';
+        trTotales.innerHTML = `
+            <td colspan="3">TOTALES</td>
+            <td>${totalGeneral.horasNormales.toFixed(1)}</td>
+            <td>${totalGeneral.horasExtras.toFixed(1)}</td>
+            <td>${(totalGeneral.horasNormales + totalGeneral.horasExtras).toFixed(1)}</td>
+            <td>${totalGeneral.montoNormal.toFixed(2)} €</td>
+            <td>${totalGeneral.montoExtra.toFixed(2)} €</td>
+            <td>${totalGeneral.total.toFixed(2)} €</td>
+            <td></td>
+        `;
+        tbody.appendChild(trTotales);
         
         // Configurar eventos en los botones
         this.configurarBotonesAcciones();
@@ -666,9 +716,9 @@ const Nomina = {
         try {
             let doc;
             if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-                doc = new window.jspdf.jsPDF();
+                doc = new window.jspdf.jsPDF('l', 'mm', 'a4'); // Orientación horizontal
             } else if (typeof jsPDF !== 'undefined') {
-                doc = new jsPDF();
+                doc = new jsPDF('l', 'mm', 'a4'); // Orientación horizontal
             } else {
                 throw new Error('jsPDF no está disponible');
             }
@@ -679,77 +729,195 @@ const Nomina = {
                 return;
             }
 
-            // Título centrado
-            doc.setFontSize(18);
-            doc.setTextColor(41, 128, 185);
-            doc.text('Registro de Nóminas', 105, 20, { align: 'center' });
+            // Configuración de página
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            const contentWidth = pageWidth - (margin * 2);
 
-            // Fecha y hora arriba a la derecha
+            // Título y fecha
+            doc.setFontSize(16);
+            doc.setTextColor(41, 128, 185);
+            doc.text('Registro de Nóminas', pageWidth / 2, 15, { align: 'center' });
+
             doc.setFontSize(10);
             doc.setTextColor(100);
-            doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, 200, 15, { align: 'right' });
+            doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')} ${new Date().toLocaleTimeString('es-ES')}`, pageWidth - margin, 15, { align: 'right' });
 
-            // Encabezados de tabla
-            const headers = ['Persona', 'Fecha', 'Sección', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Observaciones'];
-            const colWidths = [35, 22, 22, 22, 22, 22, 45];
-            let y = 35;
-            let x = 10;
-            let rowHeight = 9;
+            // Configuración de columnas
+            const columns = [
+                { header: 'Persona', width: 40 },
+                { header: 'Fecha', width: 25 },
+                { header: 'Sección', width: 25 },
+                { header: 'Horas Normales', width: 25 },
+                { header: 'Horas Extras', width: 25 },
+                { header: 'Total Horas', width: 25 },
+                { header: 'Monto Normal (€)', width: 30 },
+                { header: 'Monto Extra (€)', width: 30 },
+                { header: 'Total (€)', width: 30 }
+            ];
 
-            // Encabezado con fondo azul
-            doc.setFillColor(41, 128, 185);
-            doc.setTextColor(255,255,255);
-            let colX = x;
-            headers.forEach((header, i) => {
-                doc.rect(colX, y, colWidths[i], rowHeight, 'F');
-                doc.text(header, colX + 2, y + 6);
-                colX += colWidths[i];
+            // Preparar datos
+            const data = nominas.map(nomina => {
+                const horasNormales = nomina.horasNormales || 0;
+                const horasExtras = nomina.horasExtras || 0;
+                const totalHoras = horasNormales + horasExtras;
+                const montoNormal = (horasNormales * this.PRECIOS.HORA_NORMAL).toFixed(2);
+                const montoExtra = (horasExtras * this.PRECIOS.HORA_EXTRA).toFixed(2);
+                const totalMonto = (parseFloat(montoNormal) + parseFloat(montoExtra)).toFixed(2);
+
+                return {
+                    personaNombre: nomina.personaNombre || 'Sin asignar',
+                    fecha: new Date(nomina.fecha).toLocaleDateString('es-ES'),
+                    seccion: nomina.seccion || 'N/A',
+                    horasNormales: horasNormales.toFixed(1),
+                    horasExtras: horasExtras.toFixed(1),
+                    totalHoras: totalHoras.toFixed(1),
+                    montoNormal: montoNormal + ' €',
+                    montoExtra: montoExtra + ' €',
+                    totalMonto: totalMonto + ' €'
+                };
             });
 
-            // Filas de la tabla
-            y += rowHeight;
-            doc.setFontSize(9);
-            nominas.forEach((nomina, idx) => {
-                colX = x;
-                // Fondo alterno
-                if (idx % 2 === 1) {
-                    doc.setFillColor(240, 240, 240);
-                    doc.rect(x, y, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
-                }
-                doc.setTextColor(30,30,30);
-                const fila = [
-                    nomina.personaNombre || 'No asignado',
-                    nomina.fecha,
-                    nomina.seccion || 'N/A',
-                    (nomina.horasNormales || 0).toFixed(1),
-                    (nomina.horasExtras || 0).toFixed(1),
-                    ((nomina.horasNormales || 0) + (nomina.horasExtras || 0)).toFixed(1),
-                    (nomina.observaciones || '').substring(0, 40)
-                ];
-                fila.forEach((cell, i) => {
-                    doc.text(String(cell), colX + 2, y + 6, { maxWidth: colWidths[i] - 4 });
-                    // Bordes de celda
-                    doc.setDrawColor(200);
-                    doc.rect(colX, y, colWidths[i], rowHeight);
-                    colX += colWidths[i];
+            // Calcular totales
+            const totales = data.reduce((acc, curr) => ({
+                horasNormales: acc.horasNormales + parseFloat(curr.horasNormales),
+                horasExtras: acc.horasExtras + parseFloat(curr.horasExtras),
+                montoNormal: acc.montoNormal + parseFloat(curr.montoNormal),
+                montoExtra: acc.montoExtra + parseFloat(curr.montoExtra),
+                totalMonto: acc.totalMonto + parseFloat(curr.totalMonto)
+            }), {
+                horasNormales: 0,
+                horasExtras: 0,
+                montoNormal: 0,
+                montoExtra: 0,
+                totalMonto: 0
+            });
+
+            // Agregar fila de totales
+            data.push({
+                personaNombre: 'TOTALES',
+                fecha: '',
+                seccion: '',
+                horasNormales: totales.horasNormales.toFixed(1),
+                horasExtras: totales.horasExtras.toFixed(1),
+                totalHoras: (totales.horasNormales + totales.horasExtras).toFixed(1),
+                montoNormal: totales.montoNormal.toFixed(2) + ' €',
+                montoExtra: totales.montoExtra.toFixed(2) + ' €',
+                totalMonto: totales.totalMonto.toFixed(2) + ' €'
+            });
+
+            // Dibujar tabla
+            let y = 25;
+            const rowHeight = 8;
+            const headerHeight = 10;
+            let currentPage = 1;
+            const totalPages = Math.ceil((data.length * rowHeight + headerHeight) / (pageHeight - margin * 2));
+
+            // Función para dibujar encabezado
+            const drawHeader = (yPos) => {
+                let x = margin;
+                doc.setFillColor(41, 128, 185);
+                doc.setTextColor(255);
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'bold');
+
+                columns.forEach(col => {
+                    doc.rect(x, yPos, col.width, headerHeight, 'F');
+                    doc.text(col.header, x + 2, yPos + 6);
+                    x += col.width;
                 });
-                y += rowHeight;
-                if (y > 270) { // Salto de página si es necesario
-                    doc.addPage();
-                    y = 20;
-                    // Repetir encabezado en nueva página
-                    colX = x;
-                    doc.setFillColor(41, 128, 185);
-                    doc.setTextColor(255,255,255);
-                    headers.forEach((header, i) => {
-                        doc.rect(colX, y, colWidths[i], rowHeight, 'F');
-                        doc.text(header, colX + 2, y + 6);
-                        colX += colWidths[i];
-                    });
-                    y += rowHeight;
-                    doc.setFontSize(9);
+
+                doc.setTextColor(0);
+                doc.setFont(undefined, 'normal');
+                return yPos + headerHeight;
+            };
+
+            // Función para dibujar fila
+            const drawRow = (row, yPos, isTotal = false) => {
+                let x = margin;
+                doc.setFontSize(8);
+
+                if (isTotal) {
+                    doc.setFillColor(240, 240, 240);
+                    doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
+                    doc.setFont(undefined, 'bold');
                 }
-            });
+
+                // Persona
+                doc.text(row.personaNombre, x + 2, yPos + 5);
+                x += columns[0].width;
+
+                // Fecha
+                doc.text(row.fecha, x + 2, yPos + 5, { align: 'center' });
+                x += columns[1].width;
+
+                // Sección
+                doc.text(row.seccion, x + 2, yPos + 5, { align: 'center' });
+                x += columns[2].width;
+
+                // Horas Normales
+                doc.text(row.horasNormales, x + columns[3].width - 2, yPos + 5, { align: 'right' });
+                x += columns[3].width;
+
+                // Horas Extras
+                doc.text(row.horasExtras, x + columns[4].width - 2, yPos + 5, { align: 'right' });
+                x += columns[4].width;
+
+                // Total Horas
+                doc.text(row.totalHoras, x + columns[5].width - 2, yPos + 5, { align: 'right' });
+                x += columns[5].width;
+
+                // Monto Normal
+                doc.text(row.montoNormal, x + columns[6].width - 2, yPos + 5, { align: 'right' });
+                x += columns[6].width;
+
+                // Monto Extra
+                doc.text(row.montoExtra, x + columns[7].width - 2, yPos + 5, { align: 'right' });
+                x += columns[7].width;
+
+                // Total Monto
+                doc.text(row.totalMonto, x + columns[8].width - 2, yPos + 5, { align: 'right' });
+
+                doc.setFont(undefined, 'normal');
+                return yPos + rowHeight;
+            };
+
+            // Dibujar tabla página por página
+            for (let i = 0; i < data.length; i++) {
+                if (y + rowHeight > pageHeight - margin) {
+                    // Agregar número de página
+                    doc.setFontSize(8);
+                    doc.setTextColor(100);
+                    doc.text(
+                        `Página ${currentPage} de ${totalPages}`,
+                        pageWidth - margin,
+                        pageHeight - margin,
+                        { align: 'right' }
+                    );
+
+                    // Nueva página
+                    doc.addPage();
+                    currentPage++;
+                    y = margin;
+                }
+
+                if (i === 0 || y === margin) {
+                    y = drawHeader(y);
+                }
+
+                y = drawRow(data[i], y, i === data.length - 1);
+            }
+
+            // Agregar número de página en la última página
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(
+                `Página ${currentPage} de ${totalPages}`,
+                pageWidth - margin,
+                pageHeight - margin,
+                { align: 'right' }
+            );
 
             const fileName = `registro_nominas_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
@@ -821,7 +989,7 @@ const Nomina = {
             const dataDetalle = [
                 ['DETALLE DE NÓMINAS'],
                 [],
-                ['Persona', 'Fecha', 'Sección', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Observaciones']
+                ['Persona', 'Fecha', 'Sección', 'Horas Normales', 'Horas Extras', 'Total Horas', 'Monto Normal', 'Monto Extra', 'Total Monto', 'Observaciones']
             ];
             
             // Agregar datos del detalle
@@ -833,6 +1001,9 @@ const Nomina = {
                     nomina.horasNormales.toFixed(1),
                     nomina.horasExtras.toFixed(1),
                     (nomina.horasNormales + nomina.horasExtras).toFixed(1),
+                    (nomina.horasNormales * this.PRECIOS.HORA_NORMAL).toFixed(2),
+                    (nomina.horasExtras * this.PRECIOS.HORA_EXTRA).toFixed(2),
+                    ((nomina.horasNormales * this.PRECIOS.HORA_NORMAL) + (nomina.horasExtras * this.PRECIOS.HORA_EXTRA)).toFixed(2),
                     nomina.observaciones || ''
                 ]);
             });
@@ -848,6 +1019,9 @@ const Nomina = {
                 { wch: 15 },  // Horas Normales
                 { wch: 15 },  // Horas Extras
                 { wch: 15 },  // Total Horas
+                { wch: 15 },  // Monto Normal
+                { wch: 15 },  // Monto Extra
+                { wch: 15 },  // Total Monto
                 { wch: 30 }   // Observaciones
             ];
             

@@ -9,8 +9,8 @@ const Historial = {
             fechaDesde: '',
             fechaHasta: '',
             area: '',
-            busqueda: '',
-            persona: ''
+            persona: '',
+            busqueda: ''
         }
     },
 
@@ -176,8 +176,8 @@ const Historial = {
             fechaDesde: '',
             fechaHasta: '',
             area: '',
-            busqueda: '',
-            persona: ''
+            persona: '',
+            busqueda: ''
         };
 
         document.getElementById('filtroFechaDesde').value = '';
@@ -271,9 +271,14 @@ const Historial = {
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary btn-ver-detalle" data-id="${nota.id}" title="Ver detalle">
-                        <i class="fas fa-eye"></i>
-                    </button>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-ver-detalle" data-id="${nota.id}" title="Ver detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-eliminar" data-id="${nota.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             
@@ -284,12 +289,23 @@ const Historial = {
         this.setupBotonesAcciones();
     },
 
-    // Configurar botones de acciones
+    // Configurar eventos en los botones
     setupBotonesAcciones() {
-        document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
+        // Botones de ver detalle
+        const botonesVerDetalle = document.querySelectorAll('.btn-ver-detalle');
+        botonesVerDetalle.forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
-                this.verDetalleNota(id);
+                this.verDetalleActividad(id);
+            });
+        });
+
+        // Botones de eliminar
+        const botonesEliminar = document.querySelectorAll('.btn-eliminar');
+        botonesEliminar.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                this.eliminarActividad(id);
             });
         });
     },
@@ -386,6 +402,20 @@ const Historial = {
 
         const fecha = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `historial_${fecha}.xlsx`);
+    },
+
+    // Eliminar actividad
+    eliminarActividad(id) {
+        if (confirm('¿Está seguro de eliminar esta actividad? Esta acción no se puede deshacer.')) {
+            try {
+                DB.delete('notas', id);
+                UI.mostrarNotificacion('Actividad eliminada correctamente', 'success');
+                this.mostrarHistorial();
+            } catch (error) {
+                console.error('Error al eliminar actividad:', error);
+                UI.mostrarNotificacion('Error al eliminar la actividad', 'error');
+            }
+        }
     }
 };
 
