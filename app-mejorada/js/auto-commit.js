@@ -12,12 +12,13 @@ const AutoCommit = {
 
     // Inicializar
     init() {
-        console.log('Iniciando sistema de auto-commit...');
+        console.log('Sistema de auto-commit iniciado - Los cambios se guardarán automáticamente cada 5 minutos');
         this.iniciarTimer();
         
         // Escuchar cambios en el almacenamiento local
         window.addEventListener('storage', (e) => {
             if (e.key && e.key.startsWith('db_')) {
+                console.log('Cambios detectados en el almacenamiento local');
                 this.detectarCambios();
             }
         });
